@@ -1,0 +1,17 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="cron-naturally">
+  <!-- clock face -->
+  <circle cx="32" cy="32" r="27" stroke="currentColor" stroke-width="2" opacity="0.22"/>
+  <!-- asterisk spokes: the cron wildcard * doubling as clock ticks -->
+  <g stroke="currentColor" stroke-width="7" stroke-linecap="round">
+    <line x1="53.7" y1="19.5" x2="39.8" y2="27.5"/>
+    <line x1="53.7" y1="44.5" x2="39.8" y2="36.5"/>
+    <line x1="32"   y1="57"   x2="32"   y2="40"/>
+    <line x1="10.3" y1="44.5" x2="24.2" y2="36.5"/>
+    <line x1="10.3" y1="19.5" x2="24.2" y2="27.5"/>
+  </g>
+  <!-- 12 o'clock spoke rendered as the clock hand: longer, bolder -->
+  <line x1="32" y1="6" x2="32" y2="30" stroke="currentColor" stroke-width="8" stroke-linecap="round"/>
+  <!-- pivot -->
+  <circle cx="32" cy="32" r="6" fill="currentColor"/>
+  <circle cx="32" cy="32" r="2.4" fill="var(--logo-pivot, #fbf3e2)"/>
+</svg>

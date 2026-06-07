@@ -1,0 +1,17 @@
+# MacOS stuff
+.DS_Store
+
+# Node dependencies
+node_modules/
+
+# Build output (emitted by `npm run build`; rebuilt on publish)
+dist/
+
+# Typescript cache
+*.tsbuildinfo
+
+# Bundled package for the docs site
+docs/cron-naturally.mjs
+
+# Test coverage
+coverage/

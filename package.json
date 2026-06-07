@@ -1,0 +1,75 @@
+{
+  "name": "cron-naturally",
+  "version": "0.1.0",
+  "description": "Two-way translation between plain English and cron expressions. Parse 'weekdays at noon' into '0 12 * * 1-5', describe any cron in canonical English, and explain it field by field — with friendly errors and surfaced assumptions.",
+  "keywords": [
+    "cron",
+    "crontab",
+    "natural-language",
+    "nlp",
+    "schedule",
+    "scheduler",
+    "cron-parser",
+    "cron-expression",
+    "human-readable",
+    "english"
+  ],
+  "license": "MIT",
+  "author": "Rills <oss@rills.ai> (https://rills.ai)",
+  "homepage": "https://github.com/rillsai/cron-naturally#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rillsai/cron-naturally.git"
+  },
+  "bugs": {
+    "url": "https://github.com/rillsai/cron-naturally/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "src",
+    "!src/**/__tests__",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "npm run clean && tsc",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "check-types": "tsc --noEmit",
+    "lint": "biome check src",
+    "format": "biome format --write .",
+    "build:site": "esbuild src/index.ts --bundle --format=esm --platform=browser --target=es2020 --minify --outfile=docs/cron-naturally.mjs",
+    "serve:site": "esbuild src/index.ts --bundle --format=esm --platform=browser --target=es2020 --outfile=docs/cron-naturally.mjs --servedir=docs --watch=forever --serve=8731",
+    "coverage": "vitest run --coverage",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "cron-parser": "^5.5.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.14",
+    "@vitest/coverage-v8": "^4.1.8",
+    "esbuild": "^0.27.0",
+    "typescript": "5.9.3",
+    "vitest": "^4.1.0"
+  }
+}

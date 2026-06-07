@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en" data-theme-default>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>cron-naturally — schedules in plain English, both ways</title>
+    <meta
+      name="description"
+      content="Two-way translation between plain English and cron. Parse 'weekdays at noon' into 0 12 * * 1-5, describe any cron in canonical English, and explain it field by field. MIT, dependency-light, round-trip tested."
+    />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <meta name="color-scheme" content="light dark" />
+    <meta property="og:title" content="cron-naturally" />
+    <meta property="og:description" content="Schedules in plain English, both ways. A tiny, round-trip-tested cron translator." />
+    <meta property="og:type" content="website" />
+
+    <!-- Set theme before paint to avoid flash -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("cn-theme");
+          if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+        } catch (e) {}
+      })();
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Hanken+Grotesk:ital,wght@0,400;0,500;0,600;1,600&family=JetBrains+Mono:wght@400;500&family=Martian+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- ===================================================== header -->
+    <header class="masthead">
+      <div class="shell">
+        <a class="brand" href="#top" aria-label="cron-naturally home">
+          <svg class="logo" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+            <circle cx="32" cy="32" r="27" stroke="currentColor" stroke-width="2" opacity="0.22" />
+            <g stroke="currentColor" stroke-width="7" stroke-linecap="round">
+              <line x1="53.7" y1="19.5" x2="39.8" y2="27.5" />
+              <line x1="53.7" y1="44.5" x2="39.8" y2="36.5" />
+              <line x1="32" y1="57" x2="32" y2="40" />
+              <line x1="10.3" y1="44.5" x2="24.2" y2="36.5" />
+              <line x1="10.3" y1="19.5" x2="24.2" y2="27.5" />
+            </g>
+            <line x1="32" y1="6" x2="32" y2="30" stroke="currentColor" stroke-width="8" stroke-linecap="round" />
+            <circle cx="32" cy="32" r="6" fill="currentColor" />
+            <circle cx="32" cy="32" r="2.4" fill="var(--logo-pivot)" />
+          </svg>
+          <span class="wordmark"><span class="cron">cron</span><span class="mid">·</span><span class="nat">naturally</span></span>
+        </a>
+
+        <nav class="nav">
+          <a href="#try" class="hide-sm">Demo</a>
+          <a href="#api" class="hide-sm">API</a>
+          <span class="sep hide-sm"></span>
+          <a href="https://www.npmjs.com/package/cron-naturally">npm</a>
+          <a href="https://github.com/rillsai/cron-naturally">GitHub</a>
+          <button class="icon-btn theme-toggle" id="theme-toggle" type="button" aria-label="Toggle dark mode">
+            <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" />
+            </svg>
+            <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+            </svg>
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <main id="top">
+      <!-- ===================================================== hero -->
+      <section class="hero shell">
+        <div class="hero-head">
+          <h1>Write schedules the way you'd <em>say</em> them.</h1>
+        </div>
+        <p class="lede">
+          <strong>cron-naturally</strong> turns plain English into cron and cron back into plain English. Type a
+          schedule, paste an expression, or click an example. Every description it writes parses back to the same cron.
+        </p>
+
+        <div class="cta-row">
+          <button class="install" id="install-btn" type="button" aria-label="Copy install command">
+            <span class="prompt">$</span><span>npm install cron-naturally</span>
+            <span class="cp" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></svg>
+            </span>
+          </button>
+          <a class="btn-ghost" href="#api">
+            Read the API
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+          </a>
+        </div>
+
+        <!-- the live translator: the proof -->
+        <div class="translator" id="translator">
+          <div class="translator-head">
+            <span class="label">Live translator</span>
+            <span class="mode" id="mode-tag">English → cron</span>
+          </div>
+
+          <div class="tinput-wrap">
+            <span class="caret" aria-hidden="true">*</span>
+            <input
+              id="schedule-input"
+              type="text"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+              aria-label="Type a schedule in English or paste a cron expression"
+              placeholder="every 15 minutes on weekdays"
+            />
+          </div>
+
+          <div class="tbody" id="tbody" aria-live="polite"></div>
+        </div>
+      </section>
+
+      <!-- ===================================================== try chips -->
+      <section class="try shell" id="try">
+        <h2>Try a phrase, or paste a cron.</h2>
+        <p class="sub">
+          These are the canonical phrases the parser teaches. The grammar it teaches is the grammar it parses, enforced
+          by round-trip tests so the chips never drift from behavior.
+        </p>
+        <div class="chips" id="chips" role="list"></div>
+      </section>
+
+      <!-- ===================================================== why -->
+      <section class="why shell">
+        <h2 class="section-h">Built for the parts a real UI actually needs.</h2>
+        <p class="section-sub">Most cron libraries go one direction and stop. This one does both, and handles the messy middle.</p>
+        <div class="why-grid">
+          <article class="why-card">
+            <span class="num">01</span>
+            <h3>Errors that never blame you</h3>
+            <p>When something doesn't fit standard cron, it explains why and suggests a phrasing that works, instead of emitting a wrong expression.</p>
+            <div class="demo">
+              <span class="in">"every 3 days"</span>
+              <span class="x">✗ cron can't count days from a start point</span>
+              <span class="out">→ try "mondays and thursdays"</span>
+            </div>
+          </article>
+          <article class="why-card">
+            <span class="num">02</span>
+            <h3>Assumptions, surfaced</h3>
+            <p>Ambiguous input gets a sane default and surfaces it, returning a ready-made alternative phrasing your UI can offer as a one-click fix.</p>
+            <div class="demo">
+              <span class="in">"daily at 9"</span>
+              <span class="out">→ 0 9 * * *</span>
+              <span class="in">Read "9" as 9:00 AM. Did you mean 9:00 PM?</span>
+            </div>
+          </article>
+          <article class="why-card">
+            <span class="num">03</span>
+            <h3>A canonical grammar</h3>
+            <p>The set of phrases it teaches is the set it parses. Every English description round-trips back to a semantically identical cron, proven in tests.</p>
+            <div class="demo">
+              <span class="in">"weekends at 8:30am"</span>
+              <span class="out">→ 30 8 * * 0,6</span>
+              <span class="out">→ "Weekends at 8:30 AM" → 30 8 * * 0,6 ✓</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <!-- ===================================================== api -->
+      <section class="api shell" id="api">
+        <h2 class="section-h">Four functions, fully typed.</h2>
+        <p class="section-sub">Ships ESM with declarations. Runs in the browser and in Node 18+ (this page's demo is the library, bundled and running client-side). One runtime dependency (<code>cron-parser</code>, used only by <code>getNextRuns</code>).</p>
+
+        <div class="api-grid">
+          <div class="fn">
+            <div class="sig"><span class="name">parseNaturalSchedule</span>(input: string): ParseResult</div>
+            <p class="desc">English (or a pasted cron) → a result with the cron, canonical description, and any surfaced assumptions. On failure: a warm hint and up to two suggestions.</p>
+          </div>
+          <div class="fn">
+            <div class="sig"><span class="name">describeCron</span>(cron: string): string | null</div>
+            <p class="desc">Cron → canonical English, or null when outside the supported grammar. Guaranteed to round-trip.</p>
+          </div>
+          <div class="fn">
+            <div class="sig"><span class="name">explainCronFields</span>(cron: string): CronFieldExplanation[] | null</div>
+            <p class="desc">Cron → per-field breakdown for an explain-mode table. The five cells in the translator above are this function.</p>
+          </div>
+          <div class="fn">
+            <div class="sig"><span class="name">getNextRuns</span>(cron, timezone, count?): Date[]</div>
+            <p class="desc">The next run times in any IANA timezone. The list under the translator is your own timezone, computed live.</p>
+          </div>
+        </div>
+
+        <div class="codeblock" aria-label="Usage example">
+<pre><code><span class="c-kw">import</span> { parseNaturalSchedule, describeCron } <span class="c-kw">from</span> <span class="c-str">"cron-naturally"</span>;
+
+<span class="c-com">// English → cron</span>
+<span class="c-kw">const</span> r = <span class="c-fn">parseNaturalSchedule</span>(<span class="c-str">"every 15 minutes on weekdays"</span>);
+<span class="c-kw">if</span> (r.ok) {
+  r.cron;           <span class="c-com">// "*/15 * * * 1-5"</span>
+  r.description;    <span class="c-com">// "Every 15 minutes on weekdays"</span>
+} <span class="c-kw">else</span> {
+  r.hint;           <span class="c-com">// warm, specific guidance</span>
+  r.suggestions;    <span class="c-com">// up to two phrasings to try</span>
+}
+
+<span class="c-com">// cron → English</span>
+<span class="c-fn">describeCron</span>(<span class="c-str">"0 9 1 * *"</span>); <span class="c-com">// "Monthly on the 1st at 9:00 AM"</span></code></pre>
+        </div>
+      </section>
+    </main>
+
+    <!-- ===================================================== footer -->
+    <footer class="foot">
+      <div class="shell">
+        <a class="brand" href="#top" aria-label="cron-naturally">
+          <svg class="logo" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+            <circle cx="32" cy="32" r="27" stroke="currentColor" stroke-width="2" opacity="0.22" />
+            <g stroke="currentColor" stroke-width="7" stroke-linecap="round">
+              <line x1="53.7" y1="19.5" x2="39.8" y2="27.5" />
+              <line x1="53.7" y1="44.5" x2="39.8" y2="36.5" />
+              <line x1="32" y1="57" x2="32" y2="40" />
+              <line x1="10.3" y1="44.5" x2="24.2" y2="36.5" />
+              <line x1="10.3" y1="19.5" x2="24.2" y2="27.5" />
+            </g>
+            <line x1="32" y1="6" x2="32" y2="30" stroke="currentColor" stroke-width="8" stroke-linecap="round" />
+            <circle cx="32" cy="32" r="6" fill="currentColor" />
+            <circle cx="32" cy="32" r="2.4" fill="var(--logo-pivot)" />
+          </svg>
+          <span class="wordmark"><span class="cron">cron</span><span class="mid">·</span><span class="nat">naturally</span></span>
+        </a>
+        <div class="links">
+          <a href="https://www.npmjs.com/package/cron-naturally">npm</a>
+          <a href="https://github.com/rillsai/cron-naturally">GitHub</a>
+          <a href="https://github.com/rillsai/cron-naturally#readme">Docs</a>
+          <a href="https://github.com/rillsai/cron-naturally/issues">Issues</a>
+        </div>
+        <p class="fineprint">
+          Built with ❤️ by <a href="https://rills.ai">Rills</a>, where it powers a natural-language schedule
+          builder. The demo above runs the published library in your browser.
+        </p>
+      </div>
+    </footer>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

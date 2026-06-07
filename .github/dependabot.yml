@@ -1,0 +1,20 @@
+version: 2
+updates:
+  # Keep the SHA-pinned GitHub Actions current (security patches arrive as
+  # new SHAs; without this they would silently rot).
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # Keep dev dependencies (biome, esbuild, typescript, vitest) patched.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      dev-dependencies:
+        dependency-type: development
