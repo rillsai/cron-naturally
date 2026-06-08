@@ -30,6 +30,21 @@ describe("describeCron", () => {
     expect(describeCron("0 9 23 * *")).toEqual("Monthly on the 23rd at 9:00 AM");
   });
 
+  it("describes day-of-month lists and ranges", () => {
+    expect(describeCron("0 9 1,15 * *")).toEqual("Monthly on the 1st and 15th at 9:00 AM");
+    expect(describeCron("0 9 1-7 * *")).toEqual("Monthly on the 1st through 7th at 9:00 AM");
+  });
+
+  it("spells out the dom/dow OR when both day fields are restricted", () => {
+    expect(describeCron("30 4 1,15 * 5")).toEqual(
+      "On the 1st and 15th of the month, or on Friday, at 4:30 AM",
+    );
+    expect(describeCron("0 9 1 * 1")).toEqual("On the 1st of the month, or on Monday, at 9:00 AM");
+    expect(describeCron("0 12 1 * 1-5")).toEqual(
+      "On the 1st of the month, or on weekdays, at 12:00 PM",
+    );
+  });
+
   it("resolves @specials", () => {
     expect(describeCron("@daily")).toEqual("Every day at 12:00 AM");
     expect(describeCron("@hourly")).toEqual("Every hour");
@@ -39,7 +54,6 @@ describe("describeCron", () => {
 
   it("returns null outside the grammar", () => {
     expect(describeCron("0 9 * 2 *")).toEqual(null); // month restriction
-    expect(describeCron("0 9 1 * 1")).toEqual(null); // dom+dow combination
     expect(describeCron("@yearly")).toEqual(null); // month restriction after resolution
     expect(describeCron("garbage")).toEqual(null);
     expect(describeCron("0 9 * * 9")).toEqual(null); // invalid day

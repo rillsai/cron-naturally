@@ -9,4 +9,5 @@ export const EXAMPLE_PHRASES = [
   "weekdays at noon",
   "1st of the month at 8am",
   "fridays at 21:00",
+  "1st and 15th, or fridays, at 4:30am",
 ] as const;

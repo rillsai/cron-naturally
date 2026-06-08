@@ -86,6 +86,8 @@ Pass any of these to `parseNaturalSchedule`:
 | `mon-fri at 21:00`              | `0 21 * * 1-5`  |
 | `1st of the month at 8am`       | `0 8 1 * *`     |
 | `the 15th at midnight`          | `0 0 15 * *`    |
+| `1st and 15th at 9am`           | `0 9 1,15 * *`  |
+| `1st and 15th, or fridays, at 4:30am` | `30 4 1,15 * 5` |
 
 It is forgiving about phrasing: plurals (`mondays`), abbreviations (`mon`, `wed`), ranges (`mon-fri`, `mon through fri`), `&` / `and`, `everyday`, `military` time (`2100`), and minor typos (`weekdys`, `tuesdy`) are all handled. Single-letter day codes are accepted only where unambiguous (`m`/`w`/`f`); `t` and `s` are deliberately rejected.
 
@@ -97,7 +99,8 @@ The library targets standard 5-field cron and explains *why* when something does
 
 - `every 3 days` — cron can't count days from an arbitrary start; it suggests specific weekdays instead.
 - `last day of the month` — not expressible in standard cron; it suggests a fixed day like the 28th.
-- Mixing day-of-week with day-of-month, or an interval with a fixed time of day — both produce a clear, actionable error.
+- Pairing a day-of-week _and_ a day-of-month with no `or` (e.g. `mondays on the 15th`) — that reads as AND, which cron can't express, so it's rejected. Join them with an explicit `or` (`1st and 15th, or fridays`) to get the cron OR semantics instead.
+- An interval with a fixed time of day — produces a clear, actionable error.
 
 ## API
 
@@ -130,7 +133,7 @@ interface Assumption {
 
 ### `describeCron(cron: string): string | null`
 
-Cron → canonical English, or `null` when the expression is outside the supported grammar (e.g. month restrictions). Guaranteed to round-trip: any non-null result re-parses to a semantically identical cron.
+Cron → canonical English, or `null` when the expression is outside the supported grammar (e.g. month restrictions). Day-of-month lists/ranges (`1,15`, `1-7`) and the dom/dow OR (`30 4 1,15 * 5` → `On the 1st and 15th of the month, or on Friday, at 4:30 AM`) are spelled out explicitly. Guaranteed to round-trip: any non-null result re-parses to a semantically identical cron.
 
 ### `explainCronFields(cron: string): CronFieldExplanation[] | null`
 
@@ -143,6 +146,8 @@ interface CronFieldExplanation {
   meaning: string; // human-readable meaning
 }
 ```
+
+When **both** the day-of-month and day-of-week fields are restricted (neither is `*` or a `*`-prefixed step), cron runs when *either* matches, not both. In that case the breakdown appends a sixth `{ field: "Day rule", value: "either", … }` row spelling out the combined schedule, so the table reflects the [crontab(5)](https://man7.org/linux/man-pages/man5/crontab.5.html) OR semantics instead of hiding them.
 
 ### `getNextRuns(cron: string, timezone: string, count?: number): Date[]`
 

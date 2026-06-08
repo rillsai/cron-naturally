@@ -23,6 +23,42 @@ function listJoin(items: string[]): string {
   return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
 }
 
+/** Expand a dom field ("15", "1,15", "1-7") to day numbers; null = invalid/not a plain dom. */
+function parseDomField(field: string): number[] | null {
+  const out: number[] = [];
+  for (const part of field.split(",")) {
+    const range = part.match(/^(\d+)-(\d+)$/);
+    if (range) {
+      const from = Number(range[1]);
+      const to = Number(range[2]);
+      if (from < 1 || to > 31 || from > to) return null;
+      for (let d = from; d <= to; d++) out.push(d);
+    } else if (/^\d+$/.test(part)) {
+      const d = Number(part);
+      if (d < 1 || d > 31) return null;
+      out.push(d);
+    } else {
+      return null;
+    }
+  }
+  return out;
+}
+
+/** Day-of-month phrase without the trailing unit, e.g. "the 1st and 15th". */
+function domListPhrase(field: string): string {
+  const parts = field.split(",").map((part) => {
+    const range = part.match(/^(\d+)-(\d+)$/);
+    if (range) return `${ordinal(Number(range[1]))} through ${ordinal(Number(range[2]))}`;
+    return ordinal(Number(part));
+  });
+  return `the ${listJoin(parts)}`;
+}
+
+/** Full day-of-month phrase, e.g. "the 1st and 15th of the month". */
+export function domPhrase(field: string): string {
+  return `${domListPhrase(field)} of the month`;
+}
+
 /** Expand a dow field ("1-5", "0,6", "2-4", "7") to sorted day indices; null = invalid. */
 function expandDow(field: string): number[] | null {
   const out = new Set<number>();
@@ -91,13 +127,14 @@ export function describeCron(cron: string): string | null {
   if (hours.some((h) => h > 23)) return null;
   const timeList = listJoin(hours.map((h) => formatTime12(h, minute)));
 
-  if (/^\d+$/.test(dom)) {
-    if (dowField !== "*") return null; // dom+dow OR-semantics: refuse to describe
-    const day = Number(dom);
-    if (day < 1 || day > 31) return null;
-    return `Monthly on the ${ordinal(day)} at ${timeList}`;
+  const domDays = dom === "*" ? null : parseDomField(dom);
+  if (dom !== "*" && domDays === null) return null; // dom step or out-of-range: outside grammar
+  const hasDow = days !== null && days.length > 0 && days.length < 7;
+  if (domDays) {
+    // dom+dow are OR'd by cron: fires when EITHER matches. Spell that out.
+    if (hasDow) return `On ${domPhrase(dom)}, or${dowSuffix(days)}, at ${timeList}`;
+    return `Monthly on ${domListPhrase(dom)} at ${timeList}`;
   }
-  if (dom !== "*") return null;
 
   if (days && days.length > 0 && days.length < 7) {
     if (days.join(",") === "1,2,3,4,5") return `Weekdays at ${timeList}`;
