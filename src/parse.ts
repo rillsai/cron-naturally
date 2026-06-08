@@ -1,9 +1,9 @@
-import { isCronExpression, normalizeCronSpacing, SPECIAL_EQUIVALENTS } from "./cron";
-import { fuzzyMatch, matchDay } from "./days";
-import { describeCron } from "./describe";
-import { EXAMPLE_PHRASES } from "./examples";
-import { formatTime12, parseTimeToken, type ParsedTime } from "./time";
-import type { Assumption, ParseError, ParseResult } from "./types";
+import { isCronExpression, normalizeCronSpacing, SPECIAL_EQUIVALENTS } from "./cron.js";
+import { fuzzyMatch, matchDay } from "./days.js";
+import { describeCron } from "./describe.js";
+import { EXAMPLE_PHRASES } from "./examples.js";
+import { formatTime12, parseTimeToken, type ParsedTime } from "./time.js";
+import type { Assumption, ParseError, ParseResult } from "./types.js";
 
 const FILLERS = new Set(["a", "an", "and", "at", "each", "in", "of", "on", "the"]);
 

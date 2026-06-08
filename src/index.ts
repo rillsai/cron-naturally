@@ -3,8 +3,8 @@
 // (day labels, example phrases) and locale formatters (12-hour time, ordinals)
 // and internal patterns (cron regexes, @special map) are intentionally NOT
 // re-exported here — they remain importable internally but are not public.
-export { getNextRuns, isCronExpression } from "./cron";
-export { describeCron } from "./describe";
-export { explainCronFields, type CronFieldExplanation } from "./explain";
-export { parseNaturalSchedule } from "./parse";
-export type { Assumption, ParseError, ParseOk, ParseResult } from "./types";
+export { getNextRuns, isCronExpression } from "./cron.js";
+export { describeCron } from "./describe.js";
+export { explainCronFields, type CronFieldExplanation } from "./explain.js";
+export { parseNaturalSchedule } from "./parse.js";
+export type { Assumption, ParseError, ParseOk, ParseResult } from "./types.js";

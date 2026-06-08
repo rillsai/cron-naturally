@@ -1,6 +1,6 @@
-import { SPECIAL_EQUIVALENTS } from "./cron";
-import { DAY_LABELS } from "./days";
-import { formatTime12 } from "./time";
+import { SPECIAL_EQUIVALENTS } from "./cron.js";
+import { DAY_LABELS } from "./days.js";
+import { formatTime12 } from "./time.js";
 
 export function ordinal(n: number): string {
   const tens = n % 100;

@@ -1,5 +1,5 @@
-import { CRON_REGEX, SPECIAL_EQUIVALENTS } from "./cron";
-import { DAY_LABELS } from "./days";
+import { CRON_REGEX, SPECIAL_EQUIVALENTS } from "./cron.js";
+import { DAY_LABELS } from "./days.js";
 
 export interface CronFieldExplanation {
   field: string;
