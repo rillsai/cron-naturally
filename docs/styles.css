@@ -488,8 +488,57 @@ a:hover {
     transform: none;
   }
 }
+/* ---- day-rule band: the dom/dow OR, lifted out of the field grid ---- */
+.dayrule {
+  align-items: baseline;
+  background: var(--saffron-wash);
+  border-top: 1px solid var(--rule);
+  column-gap: clamp(1rem, 3vw, 1.75rem);
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0.85rem clamp(0.85rem, 3vw, 1.5rem) 0.95rem;
+  row-gap: 0.5rem;
+}
+.dayrule .dr-mark {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.55rem;
+}
+.dayrule .dr-tag {
+  color: var(--ink-faint);
+  font-family: var(--font-machine);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.dayrule .dr-badge {
+  background: var(--saffron);
+  border-radius: 0.3rem;
+  color: var(--paper);
+  font-family: var(--font-machine);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  padding: 0.16rem 0.42rem;
+}
+.dayrule .dr-mean {
+  color: var(--ink);
+  flex: 1 1 24ch;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  max-width: 68ch;
+}
+.dayrule.anim {
+  animation: fieldIn 0.5s var(--ease) 0.22s forwards;
+  opacity: 0;
+  transform: translateY(8px);
+}
 @media (prefers-reduced-motion: reduce) {
-  .anim .field {
+  .anim .field,
+  .dayrule.anim {
     animation: none;
     opacity: 1;
     transform: none;

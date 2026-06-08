@@ -66,9 +66,14 @@ function render(raw) {
 
   let html = "";
 
-  // field anatomy row
+  // field anatomy row. The "Day rule" entry is a cross-field annotation (the
+  // dom/dow OR), not a sixth field, so it gets a full-width band of its own
+  // instead of a lone grid cell with four empty columns beside it.
   if (fields.length) {
-    html += `<div class="fields anim">${fields
+    const dayRule = fields.find((f) => f.field === "Day rule");
+    const cells = fields.filter((f) => f.field !== "Day rule");
+
+    html += `<div class="fields anim">${cells
       .map(
         (f) => `<div class="field">
           <div class="fname">${esc(f.field)}</div>
@@ -77,6 +82,16 @@ function render(raw) {
         </div>`,
       )
       .join("")}</div>`;
+
+    if (dayRule) {
+      html += `<div class="dayrule anim">
+        <div class="dr-mark">
+          <span class="dr-tag">${esc(dayRule.field)}</span>
+          <span class="dr-badge">${esc(dayRule.value)}</span>
+        </div>
+        <p class="dr-mean">${esc(dayRule.meaning)}</p>
+      </div>`;
+    }
   }
 
   // result rows
