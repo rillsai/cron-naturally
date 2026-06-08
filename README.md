@@ -1,5 +1,7 @@
 # cron-naturally
 
+[Live demo & docs](https://rillsai.github.io/cron-naturally/) · [npm](https://www.npmjs.com/package/cron-naturally) · [Rills](https://rills.ai)
+
 Two-way translation between plain English and cron expressions.
 
 ```ts
