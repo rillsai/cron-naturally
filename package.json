@@ -1,6 +1,6 @@
 {
   "name": "cron-naturally",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Two-way translation between plain English and cron expressions. Parse 'weekdays at noon' into '0 12 * * 1-5', describe any cron in canonical English, and explain it field by field — with friendly errors and surfaced assumptions.",
   "keywords": [
     "cron",
