@@ -131,7 +131,8 @@ export function parseNaturalSchedule(raw: string): ParseResult {
   const days = new Set<number>();
   const times: TimedToken[] = [];
   const assumptions: Assumption[] = [];
-  let dom: number | null = null;
+  const doms: number[] = [];
+  let sawOr = false;
   let weekdays = false;
   let weekends = false;
   let freq: "minutely" | "hourly" | "daily" | "weekly" | "monthly" | null = null;
@@ -143,6 +144,12 @@ export function parseNaturalSchedule(raw: string): ParseResult {
 
   for (let i = 0; i < tokens.length; i++) {
     const word = canonical(tokens[i]);
+    // Explicit "or" links a day-of-month clause to a day-of-week clause, the one
+    // case where cron legitimately sets both day fields (it fires on EITHER).
+    if (tokens[i] === "or") {
+      sawOr = true;
+      continue;
+    }
     if (FILLERS.has(word)) continue;
 
     if (word === "every") {
@@ -236,7 +243,7 @@ export function parseNaturalSchedule(raw: string): ParseResult {
       continue;
     }
     if (word === "first") {
-      dom = 1;
+      doms.push(1);
       monthly = true;
       continue;
     }
@@ -254,7 +261,7 @@ export function parseNaturalSchedule(raw: string): ParseResult {
       if (d < 1 || d > 31) {
         return fail("unsupported", "Days of the month run from the 1st to the 31st.");
       }
-      dom = d;
+      doms.push(d);
       monthly = true;
       continue;
     }
@@ -376,7 +383,7 @@ export function parseNaturalSchedule(raw: string): ParseResult {
         "An interval like 'every 15 minutes' can't also have a time of day. Use one or the other.",
       );
     }
-    if (dom !== null || monthly) {
+    if (doms.length > 0 || monthly) {
       return fail(
         "unsupported",
         "Minute intervals can't be limited to a day of the month. Use days of the week instead.",
@@ -395,7 +402,7 @@ export function parseNaturalSchedule(raw: string): ParseResult {
         "An interval like 'every 2 hours' can't also have a time of day. Use 'at minute 30' to pick when within the hour.",
       );
     }
-    if (dom !== null || monthly) {
+    if (doms.length > 0 || monthly) {
       return fail(
         "unsupported",
         "Hour intervals can't be limited to a day of the month. Use days of the week instead.",
@@ -405,7 +412,7 @@ export function parseNaturalSchedule(raw: string): ParseResult {
   }
 
   if (freq === "minutely") {
-    if (times.length > 0 || dom !== null || monthly) {
+    if (times.length > 0 || doms.length > 0 || monthly) {
       return fail(
         "unsupported",
         "'Every minute' can't combine with a time of day or day of the month.",
@@ -421,7 +428,7 @@ export function parseNaturalSchedule(raw: string): ParseResult {
         "'Hourly' can't take a time of day. Use 'at minute 30' to pick when within the hour.",
       );
     }
-    if (dom !== null || monthly) {
+    if (doms.length > 0 || monthly) {
       return fail(
         "unsupported",
         "'Hourly' can't be limited to a day of the month. Use days of the week instead.",
@@ -430,20 +437,27 @@ export function parseNaturalSchedule(raw: string): ParseResult {
     return okResult(`${minuteOf ?? 0} * * * ${dowField ?? "*"}`);
   }
 
-  if (dom !== null || monthly) {
-    if (dowField) {
+  if (doms.length > 0 || monthly) {
+    // Cron OR-combines the two day fields, so both may be set only when the user
+    // explicitly said "or" (e.g. "1st and 15th, or fridays"). An implicit pairing
+    // ("mondays on the 15th") means AND, which cron can't express — reject it.
+    if (dowField && !sawOr) {
       return fail("unsupported", "Use either days of the week or a day of the month, not both.");
     }
-    const day = dom ?? 1;
-    if (dom === null) {
+    const days = doms.length > 0 ? doms : [1];
+    if (doms.length === 0) {
       assumptions.push({ text: "No day given, so this defaults to the 1st of the month." });
     }
-    if (day >= 29) {
-      assumptions.push({ text: `Months without a day ${day} are skipped.` });
+    for (const day of [...new Set(days)].sort((a, b) => a - b)) {
+      if (day >= 29) {
+        assumptions.push({ text: `Months without a day ${day} are skipped.` });
+      }
     }
     const time = resolveTime();
     if ("ok" in time) return time;
-    return okResult(`${time.minute} ${time.hours.join(",")} ${day} * *`);
+    const domField = [...new Set(days)].sort((a, b) => a - b).join(",");
+    const dowPart = sawOr && dowField ? dowField : "*";
+    return okResult(`${time.minute} ${time.hours.join(",")} ${domField} * ${dowPart}`);
   }
 
   if (dowField || freq === "daily" || freq === "weekly" || times.length > 0) {

@@ -1,5 +1,6 @@
 import { CRON_REGEX, SPECIAL_EQUIVALENTS } from "./cron.js";
 import { DAY_LABELS } from "./days.js";
+import { domPhrase } from "./describe.js";
 
 export interface CronFieldExplanation {
   field: string;
@@ -46,10 +47,16 @@ function label(index: number, n: number): string {
   return String(n);
 }
 
+/** A field is "restricted" only when it is neither "*" nor a step starting with "*". */
+function isRestricted(value: string): boolean {
+  return value !== "*" && !value.startsWith("*");
+}
+
 function explainField(index: number, value: string): string {
   if (value === "*") return EVERY[index];
   const step = value.match(/^\*\/(\d+)$/);
   if (step) return `every ${step[1]} ${STEP_UNITS[index]}`;
+  if (index === 2) return `on ${domPhrase(value)}`;
   const parts = value.split(",").map((part) => {
     const range = part.match(/^(\d+)-(\d+)$/);
     if (range) return `${label(index, Number(range[1]))} through ${label(index, Number(range[2]))}`;
@@ -70,9 +77,23 @@ export function explainCronFields(cron: string): CronFieldExplanation[] | null {
   if (!CRON_REGEX.test(resolved)) return null;
   const parts = resolved.split(/\s+/);
   if (parts.length !== 5) return null;
-  return parts.map((value, i) => ({
+  const rows: CronFieldExplanation[] = parts.map((value, i) => ({
     field: FIELD_NAMES[i],
     value,
     meaning: explainField(i, value),
   }));
+
+  // The dom/dow OR trap: when both day fields are restricted, cron fires when
+  // EITHER matches, not both. Surface it as an explicit extra row so the table
+  // reads the way the crontab(5) man page describes the behavior.
+  const [, , dom, , dow] = parts;
+  if (isRestricted(dom) && isRestricted(dow)) {
+    rows.push({
+      field: "Day rule",
+      value: "either",
+      meaning: `Both day fields are set, so cron runs when either matches: on ${domPhrase(dom)}, or on ${explainField(4, dow)}.`,
+    });
+  }
+
+  return rows;
 }

@@ -30,4 +30,34 @@ describe("explainCronFields", () => {
     });
     expect(explainCronFields("not a cron")).toEqual(null);
   });
+
+  it("renders day-of-month values and lists in plain English", () => {
+    expect(explainCronFields("0 9 15 * *")?.[2]).toEqual({
+      field: "Day of month",
+      value: "15",
+      meaning: "on the 15th of the month",
+    });
+    const rows = explainCronFields("0 9 1,15 * *");
+    expect(rows?.[2]).toEqual({
+      field: "Day of month",
+      value: "1,15",
+      meaning: "on the 1st and 15th of the month",
+    });
+    expect(rows?.length).toEqual(5);
+  });
+
+  it("flags the day-of-month / day-of-week OR when both fields are restricted", () => {
+    const rows = explainCronFields("30 4 1,15 * 5");
+    expect(rows?.length).toEqual(6);
+    expect(rows?.[5]).toEqual({
+      field: "Day rule",
+      value: "either",
+      meaning:
+        "Both day fields are set, so cron runs when either matches: on the 1st and 15th of the month, or on Friday.",
+    });
+  });
+
+  it("does not add the OR row when a day field starts with a step (counts as unrestricted)", () => {
+    expect(explainCronFields("0 4 */2 * 5")?.length).toEqual(5);
+  });
 });

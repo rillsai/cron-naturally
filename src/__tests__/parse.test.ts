@@ -54,6 +54,10 @@ describe("parseNaturalSchedule: grammar table", () => {
     ["monthly on the 15th at 9am", "0 9 15 * *"],
     ["on the 23rd at 5pm", "0 17 23 * *"],
     ["monthly", "0 9 1 * *"],
+    ["1st and 15th at 9am", "0 9 1,15 * *"],
+    // dom/dow OR: explicit "or" is the only way to set both day fields
+    ["1st and 15th of the month, or fridays, at 4:30am", "30 4 1,15 * 5"],
+    ["on the 1st or mondays at 9am", "0 9 1 * 1"],
     // bare/assumed
     ["mondays at 9", "0 9 * * 1"],
     ["9am", "0 9 * * *"],

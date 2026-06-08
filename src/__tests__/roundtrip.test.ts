@@ -28,6 +28,9 @@ const GENERATED_CRONS = [
   "30 8 * * 1-5",
   "0 9,17 * * 0,6",
   "0 7 * * 0,1,6",
+  "0 9 1,15 * *",
+  "0 9 1 * 1",
+  "30 4 1,15 * 5",
 ];
 
 describe("round-trip: describeCron output re-parses to the identical cron", () => {
