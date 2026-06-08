@@ -13,7 +13,7 @@ explainCronFields("0 9 * * 1");
 // → field-by-field anatomy, ready to render as a table
 ```
 
-No equivalent package existed, so this one was built for a natural-language schedule builder in the [Rills](https://rills.ai) automation service. It is dependency-light (one runtime dep), fully typed, and round-trip tested; every English description it produces parses back to a semantically identical cron.
+No equivalent package existed, so this one was built for a natural-language schedule builder in the [Rills](https://rills.ai) automation service. It has zero runtime dependencies, is fully typed, and round-trip tested; every English description it produces parses back to a semantically identical cron.
 
 ## Why
 
@@ -29,7 +29,7 @@ Most cron libraries go one direction — cron → English (`cronstrue`) or Engli
 npm install cron-naturally
 ```
 
-Requires Node 20+. Ships ESM with type declarations. The single runtime dependency is [`cron-parser`](https://www.npmjs.com/package/cron-parser) (used only by `getNextRuns`).
+Requires Node 20+. Ships ESM with type declarations. Zero runtime dependencies — timezone-aware next-run computation uses the platform's built-in `Intl` API.
 
 ## Quick start
 
@@ -151,7 +151,7 @@ When **both** the day-of-month and day-of-week fields are restricted (neither is
 
 ### `getNextRuns(cron: string, timezone: string, count?: number): Date[]`
 
-Next `count` run times (default 3) in the given IANA timezone. Returns `[]` on a parse error. Thin wrapper over `cron-parser`.
+Next `count` run times (default 3) in the given IANA timezone. Returns `[]` on a parse error or invalid timezone. DST-correct via the platform's `Intl` timezone database — no runtime dependency. Across a fall-back, a repeated wall hour fires at both instants; across a spring-forward, a run whose wall-clock time does not exist (e.g. `30 2` on the transition day) is skipped and resumes at the next valid occurrence.
 
 ### `isCronExpression(input: string): boolean`
 
