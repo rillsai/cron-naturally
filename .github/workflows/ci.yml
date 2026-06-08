@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [18, 20, 22, 24, 26]
+        node-version: [20, 22, 24, 26]
     steps:
       # Actions are pinned to a full commit SHA (not a mutable tag) so a
       # compromised tag cannot inject code into our build. Dependabot keeps

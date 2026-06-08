@@ -29,7 +29,7 @@ Most cron libraries go one direction — cron → English (`cronstrue`) or Engli
 npm install cron-naturally
 ```
 
-Requires Node 18+. Ships ESM with type declarations. The single runtime dependency is [`cron-parser`](https://www.npmjs.com/package/cron-parser) (used only by `getNextRuns`).
+Requires Node 20+. Ships ESM with type declarations. The single runtime dependency is [`cron-parser`](https://www.npmjs.com/package/cron-parser) (used only by `getNextRuns`).
 
 ## Quick start
 
