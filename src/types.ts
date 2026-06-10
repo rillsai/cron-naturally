@@ -8,7 +8,7 @@ export interface Assumption {
 export interface ParseOk {
   ok: true;
   cron: string;
-  /** Canonical English. Re-parses to a semantically identical cron. */
+  /** Canonical phrasing in the active locale. Re-parses to a semantically identical cron. */
   description: string;
   assumptions: Assumption[];
 }

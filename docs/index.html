@@ -171,19 +171,19 @@
       <!-- ===================================================== api -->
       <section class="api shell" id="api">
         <h2 class="section-h">Four functions, fully typed.</h2>
-        <p class="section-sub">Ships ESM with declarations. Runs in the browser and in Node 20+ (this page's demo is the library, bundled and running client-side). Zero runtime dependencies.</p>
+        <p class="section-sub">Ships ESM with declarations. Runs in the browser and in Node 20+ (this page's demo is the library, bundled and running client-side). Zero runtime dependencies. Every language-aware function takes an optional <code>{ locale }</code> and defaults to English — bundled locales ship as <code>LOCALES</code>, with <code>DEFAULT_LOCALE</code> as the fallback.</p>
 
         <div class="api-grid">
           <div class="fn">
-            <div class="sig"><span class="name">parseNaturalSchedule</span>(input: string): ParseResult</div>
-            <p class="desc">English (or a pasted cron) → a result with the cron, canonical description, and any surfaced assumptions. On failure: a warm hint and up to two suggestions.</p>
+            <div class="sig"><span class="name">parseNaturalSchedule</span>(input, opts?): ParseResult</div>
+            <p class="desc">Natural language (or a pasted cron) → a result with the cron, canonical description, and any surfaced assumptions. On failure: a warm hint and up to two suggestions.</p>
           </div>
           <div class="fn">
-            <div class="sig"><span class="name">describeCron</span>(cron: string): string | null</div>
-            <p class="desc">Cron → canonical English, or null when outside the supported grammar. Guaranteed to round-trip.</p>
+            <div class="sig"><span class="name">describeCron</span>(cron, opts?): string | null</div>
+            <p class="desc">Cron → canonical phrasing in the active locale, or null when outside the supported grammar. Guaranteed to round-trip.</p>
           </div>
           <div class="fn">
-            <div class="sig"><span class="name">explainCronFields</span>(cron: string): CronFieldExplanation[] | null</div>
+            <div class="sig"><span class="name">explainCronFields</span>(cron, opts?): CronFieldExplanation[] | null</div>
             <p class="desc">Cron → per-field breakdown for an explain-mode table. The five cells in the translator above are this function.</p>
           </div>
           <div class="fn">
@@ -193,7 +193,7 @@
         </div>
 
         <div class="codeblock" aria-label="Usage example">
-<pre><code><span class="c-kw">import</span> { parseNaturalSchedule, describeCron } <span class="c-kw">from</span> <span class="c-str">"cron-naturally"</span>;
+<pre><code><span class="c-kw">import</span> { parseNaturalSchedule, describeCron, LOCALES } <span class="c-kw">from</span> <span class="c-str">"cron-naturally"</span>;
 
 <span class="c-com">// English → cron</span>
 <span class="c-kw">const</span> r = <span class="c-fn">parseNaturalSchedule</span>(<span class="c-str">"every 15 minutes on weekdays"</span>);
@@ -206,7 +206,10 @@
 }
 
 <span class="c-com">// cron → English</span>
-<span class="c-fn">describeCron</span>(<span class="c-str">"0 9 1 * *"</span>); <span class="c-com">// "Monthly on the 1st at 9:00 AM"</span></code></pre>
+<span class="c-fn">describeCron</span>(<span class="c-str">"0 9 1 * *"</span>); <span class="c-com">// "Monthly on the 1st at 9:00 AM"</span>
+
+<span class="c-com">// other locales: pass { locale } — defaults to English</span>
+<span class="c-fn">parseNaturalSchedule</span>(<span class="c-str">"weekdays at noon"</span>, { locale: LOCALES.en });</code></pre>
         </div>
       </section>
     </main>

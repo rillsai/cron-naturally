@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatTime12, parseTimeToken } from "../time";
+import { formatTime12, parseTimeToken, readTime } from "../time";
 
 describe("parseTimeToken", () => {
   it("parses named times", () => {
@@ -37,6 +37,32 @@ describe("parseTimeToken", () => {
       null,
       null,
     ]);
+  });
+});
+
+describe("readTime with locale vocabularies", () => {
+  it("treats meridiem markers as literal text, not regex syntax", () => {
+    const words = { noon: "noon", midnight: "midnight", am: "a.m.", pm: "p.m." };
+    expect(readTime("9a.m.", words)).toEqual({ hour: 9, minute: 0, assumedMeridiem: false });
+    expect(readTime("9:30p.m.", words)).toEqual({ hour: 21, minute: 30, assumedMeridiem: false });
+    // The dot must not act as a wildcard.
+    expect(readTime("9axm.", words)).toEqual(null);
+  });
+
+  it("range-checks what a locale readClock returns", () => {
+    const words = {
+      noon: "noon",
+      midnight: "midnight",
+      am: "am",
+      pm: "pm",
+      readClock: (token: string) => {
+        const m = token.match(/^(\d{1,2})h(\d{2})?$/);
+        return m ? { hour: Number(m[1]), minute: Number(m[2] ?? "0") } : null;
+      },
+    };
+    expect(readTime("21h30", words)).toEqual({ hour: 21, minute: 30, assumedMeridiem: false });
+    expect(readTime("25h00", words)).toEqual(null);
+    expect(readTime("9h75", words)).toEqual(null);
   });
 });
 

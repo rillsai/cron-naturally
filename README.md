@@ -93,7 +93,7 @@ Pass any of these to `parseNaturalSchedule`:
 
 It is forgiving about phrasing: plurals (`mondays`), abbreviations (`mon`, `wed`), ranges (`mon-fri`, `mon through fri`), `&` / `and`, `everyday`, `military` time (`2100`), and minor typos (`weekdys`, `tuesdy`) are all handled. Single-letter day codes are accepted only where unambiguous (`m`/`w`/`f`); `t` and `s` are deliberately rejected.
 
-Pasted cron expressions (including `@daily`, `@hourly`, etc.) pass straight through and come back with a description, so the same entry point powers both "type a schedule" and "explain this cron" UIs.
+Pasted cron expressions (including `@daily`, `@hourly`, etc.) pass straight through and come back with a description, so the same entry point powers both "type a schedule" and "explain this cron" UIs. A cron that is shaped correctly but could never fire (`60 99 * * *`) is rejected with an explanation rather than passed through.
 
 ### What it deliberately rejects
 
@@ -106,9 +106,9 @@ The library targets standard 5-field cron and explains *why* when something does
 
 ## API
 
-### `parseNaturalSchedule(input: string): ParseResult`
+### `parseNaturalSchedule(input: string, opts?: LocaleOptions): ParseResult`
 
-English (or a pasted cron) → result.
+English (or a pasted cron) → result. Pass `{ locale }` to parse and answer in another bundled locale (see [Locales](#locales)).
 
 ```ts
 type ParseResult = ParseOk | ParseError;
@@ -116,7 +116,7 @@ type ParseResult = ParseOk | ParseError;
 interface ParseOk {
   ok: true;
   cron: string;          // 5-field cron expression
-  description: string;   // canonical English (re-parses to the same cron)
+  description: string;   // canonical phrasing in the active locale (re-parses to the same cron)
   assumptions: Assumption[];
 }
 
@@ -133,13 +133,13 @@ interface Assumption {
 }
 ```
 
-### `describeCron(cron: string): string | null`
+### `describeCron(cron: string, opts?: LocaleOptions): string | null`
 
-Cron → canonical English, or `null` when the expression is outside the supported grammar (e.g. month restrictions). Day-of-month lists/ranges (`1,15`, `1-7`) and the dom/dow OR (`30 4 1,15 * 5` → `On the 1st and 15th of the month, or on Friday, at 4:30 AM`) are spelled out explicitly. Guaranteed to round-trip: any non-null result re-parses to a semantically identical cron.
+Cron → canonical phrasing, or `null` when the expression is outside the supported grammar (e.g. month restrictions). Day-of-month lists/ranges (`1,15`, `1-7`) and the dom/dow OR (`30 4 1,15 * 5` → `On the 1st and 15th of the month, or on Friday, at 4:30 AM`) are spelled out explicitly. Guaranteed to round-trip: any non-null result re-parses to a semantically identical cron.
 
-### `explainCronFields(cron: string): CronFieldExplanation[] | null`
+### `explainCronFields(cron: string, opts?: LocaleOptions): CronFieldExplanation[] | null`
 
-Cron → per-field breakdown for an "explain mode" table. `null` for malformed input.
+Cron → per-field breakdown for an "explain mode" table. `null` for malformed input, or for a shape-valid cron that could never fire (out-of-range field values).
 
 ```ts
 interface CronFieldExplanation {
@@ -159,7 +159,23 @@ Next `count` run times (default 3) in the given IANA timezone. Returns `[]` on a
 
 True for a valid 5-field cron expression or an `@special` form (`@daily`, `@hourly`, …). Useful for deciding whether input is already cron before routing it through `parseNaturalSchedule`.
 
-> **Public API scope.** The surface is kept small and language-agnostic so it can survive future internationalization without a breaking change. English-specific data (day labels, example phrases) and locale formatters (12-hour time, ordinals), plus internal cron patterns and the `@special` map, are not part of the public API.
+> **Public API scope.** The surface is kept small and language-agnostic. Language data lives in locale bundles (see below); internal cron patterns and the `@special` map are not part of the public API.
+
+## Locales
+
+Every language-aware entry point (`parseNaturalSchedule`, `describeCron`, `explainCronFields`) takes an optional `{ locale }` and defaults to English, so adding a locale is non-breaking.
+
+```ts
+import { parseNaturalSchedule, DEFAULT_LOCALE, LOCALES, type Locale } from "cron-naturally";
+
+DEFAULT_LOCALE.code;           // "en"
+Object.keys(LOCALES);          // bundled locales, by code
+parseNaturalSchedule("weekdays at noon", { locale: LOCALES.en });
+```
+
+A `Locale` bundles everything language-specific, in both directions: the vocabulary the parser reads (keywords, aliases, day names, time words) and every string the library emits (errors, assumptions, descriptions, the explain table). Both halves ship together so the round-trip invariant — every description re-parses to a semantically identical cron — holds per locale.
+
+To add a language, clone the English bundle (`src/i18n/en.ts`) and translate it; the `Locale` type flags anything left untranslated. Parser keywords are locale-independent symbols — a new locale maps its surface words onto them via `aliases` rather than translating them.
 
 ## Conventions
 

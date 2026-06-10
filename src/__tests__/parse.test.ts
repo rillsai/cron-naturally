@@ -32,6 +32,7 @@ describe("parseNaturalSchedule: grammar table", () => {
     ["monday, wednesday and friday at 8am", "0 8 * * 1,3,5"],
     ["weekdays at noon", "0 12 * * 1-5"],
     ["weekends at 10am", "0 10 * * 0,6"],
+    ["weekdays and weekends at noon", "0 12 * * *"],
     ["monday through friday at 8:30am", "30 8 * * 1-5"],
     ["mon-fri at 8am", "0 8 * * 1-5"],
     ["tuesday to thursday at 4pm", "0 16 * * 2,3,4"],
@@ -54,6 +55,8 @@ describe("parseNaturalSchedule: grammar table", () => {
     ["monthly on the 15th at 9am", "0 9 15 * *"],
     ["on the 23rd at 5pm", "0 17 23 * *"],
     ["monthly", "0 9 1 * *"],
+    ["every week at 9am", "0 9 * * 1"],
+    ["every month at 8am", "0 8 1 * *"],
     ["1st and 15th at 9am", "0 9 1,15 * *"],
     // dom/dow OR: explicit "or" is the only way to set both day fields
     ["1st and 15th of the month, or fridays, at 4:30am", "30 4 1,15 * 5"],
@@ -209,6 +212,16 @@ describe("parseNaturalSchedule: errors", () => {
     expect(interval.ok && interval.cron).toEqual("15 */2 * * *");
   });
 
+  it("fuzzy-matches typos of alias spellings, not just canonical symbols", () => {
+    // "untill" is one edit from the alias "until" (→ "through"); the symbol
+    // pool alone would never match it.
+    const result = parseNaturalSchedule("monday untill friday at 9am");
+    expect(result.ok && result.cron).toEqual("0 9 * * 1-5");
+    // A typo equidistant from two surfaces of the SAME symbol still resolves.
+    const minutes = parseNaturalSchedule("every 15 minutse");
+    expect(minutes.ok && minutes.cron).toEqual("*/15 * * * *");
+  });
+
   it("unknown words are named in the hint", () => {
     const result = parseNaturalSchedule("lunchtime on mondays");
     expect(result.ok).toEqual(false);
@@ -218,6 +231,106 @@ describe("parseNaturalSchedule: errors", () => {
       reason: "unrecognized",
       hint: "Couldn't understand \"lunchtime\". Try a day plus a time, like 'fridays at 2pm'.",
       suggestions: ["mondays at 9am", "weekdays at noon"],
+    });
+  });
+
+  it("names the unrecognized end of a day range", () => {
+    const result = parseNaturalSchedule("monday through xyzzy at 9am");
+    expect(!result.ok && result.reason).toEqual("unrecognized");
+    expect(!result.ok && result.hint).toContain('"xyzzy"');
+  });
+
+  it("rejects an out-of-range day of the month", () => {
+    const result = parseNaturalSchedule("on the 32nd at 9am");
+    expect(!result.ok && result.reason).toEqual("unsupported");
+    expect(!result.ok && result.hint).toEqual("Days of the month run from the 1st to the 31st.");
+  });
+
+  it("rejects 'every N' of a calendar unit with no fixed anchor", () => {
+    for (const input of ["every 3 days", "every 2 weeks", "every 4 months"]) {
+      const result = parseNaturalSchedule(input);
+      expect(!result.ok && result.reason).toEqual("unsupported");
+      expect(!result.ok && result.hint).toContain("from an arbitrary start");
+    }
+  });
+
+  it("rejects every interval/frequency colliding with a time or day of month", () => {
+    const unsupported: Array<[string, string]> = [
+      ["every 30 hours", "Hour intervals must be between 1 and 23."],
+      ["every 15 minutes on the 1st", "Minute intervals can't be limited to a day of the month."],
+      ["every 2 hours at 9am", "An interval like 'every 2 hours' can't also have a time of day."],
+      ["every 2 hours on the 1st", "Hour intervals can't be limited to a day of the month."],
+      ["every minute at 9am", "'Every minute' can't combine with a time of day"],
+      ["hourly at 9am", "'Hourly' can't take a time of day."],
+      ["hourly on the 1st", "'Hourly' can't be limited to a day of the month."],
+    ];
+    for (const [input, hint] of unsupported) {
+      const result = parseNaturalSchedule(input);
+      expect(!result.ok && result.reason).toEqual("unsupported");
+      expect(!result.ok && result.hint).toContain(hint);
+    }
+  });
+
+  it("falls back to the unreadable hint when only filler words remain", () => {
+    const result = parseNaturalSchedule("on the");
+    expect(result).toEqual({
+      ok: false,
+      reason: "unrecognized",
+      hint: "Couldn't read that yet. Try a day plus a time, like 'fridays at 2pm'.",
+      suggestions: ["mondays at 9am", "weekdays at noon"],
+    });
+  });
+});
+
+describe("parseNaturalSchedule: assumption and minute edges", () => {
+  it("rejects an out-of-range 'at minute' value", () => {
+    const result = parseNaturalSchedule("hourly at minute 75");
+    expect(!result.ok && result.reason).toEqual("unsupported");
+    expect(!result.ok && result.hint).toEqual("Minutes run from 0 to 59.");
+  });
+
+  it("propagates the multiple-minutes error inside a monthly schedule", () => {
+    const result = parseNaturalSchedule("1st at 9:15am and 5:30pm");
+    expect(!result.ok && result.reason).toEqual("unsupported");
+    expect(!result.ok && result.hint).toContain("share the same minute");
+  });
+
+  it("flips a bare noon-hour assumption to midnight", () => {
+    const result = parseNaturalSchedule("at 12");
+    expect(result.ok).toEqual(true);
+    if (!result.ok) return;
+    expect(result.cron).toEqual("0 12 * * *");
+    expect(result.assumptions[0].alternative).toEqual({
+      label: "Did you mean 12:00 AM?",
+      input: "at midnight",
+    });
+  });
+
+  it("flips a bare hour-with-minutes assumption to PM", () => {
+    const result = parseNaturalSchedule("at 9:30");
+    expect(result.ok).toEqual(true);
+    if (!result.ok) return;
+    expect(result.assumptions[0].alternative?.input).toEqual("at 9:30pm");
+  });
+
+  it("handles inputs that end on a keyword without crashing", () => {
+    // Each ends mid-clause, exercising the trailing-token guards in the parser.
+    for (const input of ["every", "every other", "every 5", "at minute", "monday through"]) {
+      const result = parseNaturalSchedule(input);
+      expect(typeof result.ok).toEqual("boolean");
+    }
+    expect(parseNaturalSchedule("monday through").ok).toEqual(false);
+  });
+});
+
+describe("parseNaturalSchedule: pasted cron passthrough", () => {
+  it("labels a valid-but-undescribable cron as a custom schedule", () => {
+    const result = parseNaturalSchedule("0 9 * 2 *"); // month restriction is outside the grammar
+    expect(result).toEqual({
+      ok: true,
+      cron: "0 9 * 2 *",
+      description: "Custom schedule (0 9 * 2 *)",
+      assumptions: [],
     });
   });
 });

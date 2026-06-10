@@ -61,6 +61,14 @@ describe("explainCronFields", () => {
     expect(explainCronFields("0 4 */2 * 5")?.length).toEqual(5);
   });
 
+  it("explains a stepped range within a field", () => {
+    expect(explainCronFields("0 8-18/2 * * *")?.[1]).toEqual({
+      field: "Hour",
+      value: "8-18/2",
+      meaning: "every 2 hours from 8 through 18",
+    });
+  });
+
   it("explains bare steps from their start to the field maximum", () => {
     expect(explainCronFields("5/15 * * * *")?.[0].meaning).toEqual(
       "every 15 minutes from 5 through 59",
@@ -80,9 +88,32 @@ describe("explainCronFields", () => {
     );
   });
 
+  it("labels the day-of-week '7' as Sunday", () => {
+    expect(explainCronFields("0 9 * * 7")?.[4]).toEqual({
+      field: "Day of week",
+      value: "7",
+      meaning: "Sunday",
+    });
+  });
+
+  it("labels a restricted month field by name", () => {
+    expect(explainCronFields("0 9 * 6 *")?.[3]).toEqual({
+      field: "Month",
+      value: "6",
+      meaning: "June",
+    });
+  });
+
+  it("falls back to the raw number for out-of-range values inside a partly valid list", () => {
+    // One in-range value keeps the cron runnable; the stray digit has no label.
+    expect(explainCronFields("0 9 * * 1,9")?.[4].meaning).toEqual("Monday, 9");
+    expect(explainCronFields("0 9 * 1,13 *")?.[3].meaning).toEqual("January, 13");
+  });
+
   it("returns null for shape-valid crons that can never run", () => {
+    expect(explainCronFields("0 9 * * 9")).toEqual(null);
+    expect(explainCronFields("0 9 * 13 *")).toEqual(null);
     expect(explainCronFields("60 99 * * *")).toEqual(null);
-    expect(explainCronFields("0 0 * * 9")).toEqual(null);
     expect(explainCronFields("*/0 * * * *")).toEqual(null);
   });
 });

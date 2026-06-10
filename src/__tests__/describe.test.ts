@@ -57,9 +57,38 @@ describe("describeCron", () => {
     expect(describeCron("@yearly")).toEqual(null); // month restriction after resolution
     expect(describeCron("garbage")).toEqual(null);
     expect(describeCron("0 9 * * 9")).toEqual(null); // invalid day
+    expect(describeCron("0 9 x * *")).toEqual(null); // non-numeric day-of-month field
+    expect(describeCron("0 9 * * x")).toEqual(null); // non-numeric day-of-week field
   });
 
   it("treats 7 as Sunday", () => {
     expect(describeCron("0 9 * * 7")).toEqual("Every Sunday at 9:00 AM");
+  });
+
+  it("ordinal: teen days and -nd suffix", () => {
+    expect(describeCron("0 9 11 * *")).toEqual("Monthly on the 11th at 9:00 AM");
+    expect(describeCron("0 9 22 * *")).toEqual("Monthly on the 22nd at 9:00 AM");
+  });
+
+  it("normalizes 7 to Sunday inside a day-of-week range", () => {
+    expect(describeCron("0 9 * * 1-7")).toEqual("Every day at 9:00 AM");
+  });
+
+  it("returns null for fields that fall outside the grammar", () => {
+    for (const cron of [
+      "0 9 0 * *", // dom < 1
+      "0 9 40 * *", // dom > 31
+      "0 9 5-3 * *", // dom range from > to
+      "0 9 1-40 * *", // dom range to > 31
+      "0 9 0-5 * *", // dom range from < 1
+      "x 9 * * *", // non-numeric minute
+      "60 9 * * *", // minute > 59
+      "0 1-5 * * *", // hour is a range, not a plain list
+      "0 25 * * *", // hour > 23
+      "0 9 * * 8-9", // dow range from > 7
+      "0 9 * * 5-3", // dow range from > to
+    ]) {
+      expect(describeCron(cron)).toEqual(null);
+    }
   });
 });

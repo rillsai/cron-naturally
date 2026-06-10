@@ -40,6 +40,7 @@ function expandField(value: string, min: number, max: number): Set<number> {
   const out = new Set<number>();
   for (const part of value.split(",")) {
     const m = part.match(/^(\*|\d+(?:-\d+)?)(?:\/(\d+))?$/);
+    /* v8 ignore next -- the CRON_REGEX gate upstream guarantees every part matches */
     if (!m) continue;
     const [, head, stepStr] = m;
 
@@ -176,7 +177,8 @@ function wallParts(instantMs: number, tz: string): WallClock {
   for (const { type, value } of formatterFor(tz).formatToParts(instantMs)) {
     if (type !== "literal") p[type] = Number(value);
   }
-  if (p.hour === 24) p.hour = 0; // some engines render midnight as hour "24"
+  /* v8 ignore next -- some engines render midnight as hour "24"; most never do */
+  if (p.hour === 24) p.hour = 0;
   return p as unknown as WallClock;
 }
 

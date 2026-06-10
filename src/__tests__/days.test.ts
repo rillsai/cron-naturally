@@ -31,6 +31,10 @@ describe("matchDay", () => {
     ).toEqual([0, 0, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4, 4, 5, 5, 6, 6]);
   });
 
+  it("matches plurals of curated abbreviations", () => {
+    expect(["mons", "fris"].map(matchDay)).toEqual([1, 5]);
+  });
+
   it("allows unambiguous single letters only", () => {
     expect(["m", "w", "f"].map(matchDay)).toEqual([1, 3, 5]);
     // "t" (tue/thu) and "s" (sat/sun) are ambiguous by design

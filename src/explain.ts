@@ -1,6 +1,7 @@
 import { CRON_REGEX, isRunnableCron, SPECIAL_EQUIVALENTS } from "./cron.js";
-import { DAY_LABELS } from "./days.js";
 import { domPhrase } from "./describe.js";
+import { type LocaleOptions, resolveLocale } from "./i18n/index.js";
+import type { Locale } from "./i18n/types.js";
 
 export interface CronFieldExplanation {
   field: string;
@@ -8,45 +9,12 @@ export interface CronFieldExplanation {
   meaning: string;
 }
 
-const FIELD_NAMES = ["Minute", "Hour", "Day of month", "Month", "Day of week"] as const;
-
-const MONTH_LABELS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-
-const EVERY: Record<number, string> = {
-  0: "every minute",
-  1: "every hour",
-  2: "every day of the month",
-  3: "every month",
-  4: "every day of the week",
-};
-
-const STEP_UNITS: Record<number, string> = {
-  0: "minutes",
-  1: "hours",
-  2: "days",
-  3: "months",
-  4: "days of the week",
-};
-
 /** Inclusive upper bound per field — a bare step ("5/15") runs from its start to this. */
 const FIELD_MAX = [59, 23, 31, 12, 7] as const;
 
-function label(index: number, n: number): string {
-  if (index === 4) return DAY_LABELS[n === 7 ? 0 : n] ?? String(n);
-  if (index === 3) return MONTH_LABELS[n - 1] ?? String(n);
+function label(index: number, n: number, loc: Locale): string {
+  if (index === 4) return loc.days.labels[n === 7 ? 0 : n] ?? String(n);
+  if (index === 3) return loc.messages.explain.monthLabels[n - 1] ?? String(n);
   return String(n);
 }
 
@@ -55,44 +23,65 @@ function isRestricted(value: string): boolean {
   return value !== "*" && !value.startsWith("*");
 }
 
-function explainField(index: number, value: string): string {
-  if (value === "*") return EVERY[index];
+function explainField(index: number, value: string, loc: Locale): string {
+  const E = loc.messages.explain;
+  if (value === "*") return E.every[index];
   const step = value.match(/^\*\/(\d+)$/);
-  if (step) return `every ${step[1]} ${STEP_UNITS[index]}`;
-  if (index === 2 && !value.includes("/")) return `on ${domPhrase(value)}`;
+  if (step) return E.everyNUnits(step[1], E.stepUnits[index]);
+  if (index === 2 && !value.includes("/")) return E.onDom(domPhrase(value, loc));
   const parts = value.split(",").map((part) => {
     const range = part.match(/^(\d+)-(\d+)$/);
-    if (range) return `${label(index, Number(range[1]))} through ${label(index, Number(range[2]))}`;
+    if (range)
+      return loc.format.range(
+        label(index, Number(range[1]), loc),
+        label(index, Number(range[2]), loc),
+      );
     const stepped = part.match(/^(\d+)-(\d+)\/(\d+)$/);
     if (stepped) {
-      return `every ${stepped[3]} ${STEP_UNITS[index]} from ${label(index, Number(stepped[1]))} through ${label(index, Number(stepped[2]))}`;
+      return E.everyNFromThrough(
+        stepped[3],
+        E.stepUnits[index],
+        label(index, Number(stepped[1]), loc),
+        label(index, Number(stepped[2]), loc),
+      );
     }
     // A bare step ("5/15") runs from its start to the field maximum.
     const bareStep = part.match(/^(\d+)\/(\d+)$/);
     if (bareStep) {
-      return `every ${bareStep[2]} ${STEP_UNITS[index]} from ${label(index, Number(bareStep[1]))} through ${label(index, FIELD_MAX[index])}`;
+      return E.everyNFromThrough(
+        bareStep[2],
+        E.stepUnits[index],
+        label(index, Number(bareStep[1]), loc),
+        label(index, FIELD_MAX[index], loc),
+      );
     }
-    return label(index, Number(part));
+    return label(index, Number(part), loc);
   });
   const joined = parts.join(", ");
   if (index === 4 || index === 3) return joined;
   // A lone step phrase ("every 15 minutes from 5 through 59") already names
-  // its unit; prefixing "at minute" would double it up.
+  // its unit; prefixing the field name would double it up.
   if (value.includes("/") && !value.includes(",")) return joined;
-  return `at ${FIELD_NAMES[index].toLowerCase()} ${joined}`;
+  return E.atField(E.fieldNames[index], joined);
 }
 
 /** Field-by-field anatomy for the explain mode table. Null for invalid crons. */
-export function explainCronFields(cron: string): CronFieldExplanation[] | null {
+export function explainCronFields(
+  cron: string,
+  opts?: LocaleOptions,
+): CronFieldExplanation[] | null {
+  const loc = resolveLocale(opts);
+  const E = loc.messages.explain;
   const resolved = SPECIAL_EQUIVALENTS[cron.trim()] ?? cron.trim();
   if (!CRON_REGEX.test(resolved)) return null;
   if (!isRunnableCron(resolved)) return null; // shape-valid but a field never matches (e.g. "60 99 * * *")
   const parts = resolved.split(/\s+/);
+  /* v8 ignore next -- unreachable: CRON_REGEX above already requires exactly 5 fields */
   if (parts.length !== 5) return null;
   const rows: CronFieldExplanation[] = parts.map((value, i) => ({
-    field: FIELD_NAMES[i],
+    field: E.fieldNames[i],
     value,
-    meaning: explainField(i, value),
+    meaning: explainField(i, value, loc),
   }));
 
   // The dom/dow OR trap: when both day fields are restricted, cron fires when
@@ -101,11 +90,11 @@ export function explainCronFields(cron: string): CronFieldExplanation[] | null {
   const [, , dom, , dow] = parts;
   if (isRestricted(dom) && isRestricted(dow)) {
     // A stepped dom ("5/10") has no ordinal phrase; reuse its field meaning.
-    const domMeaning = dom.includes("/") ? explainField(2, dom) : `on ${domPhrase(dom)}`;
+    const domMeaning = dom.includes("/") ? explainField(2, dom, loc) : E.onDom(domPhrase(dom, loc));
     rows.push({
-      field: "Day rule",
-      value: "either",
-      meaning: `Both day fields are set, so cron runs when either matches: ${domMeaning}, or on ${explainField(4, dow)}.`,
+      field: E.dayRuleField,
+      value: E.dayRuleValue,
+      meaning: E.dayRuleMeaning(domMeaning, explainField(4, dow, loc)),
     });
   }
 

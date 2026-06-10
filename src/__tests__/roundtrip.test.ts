@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { describeCron } from "../describe";
-import { EXAMPLE_PHRASES } from "../examples";
+import { en } from "../i18n/en";
 import { parseNaturalSchedule } from "../parse";
+
+const EXAMPLE_PHRASES = en.messages.examples;
 
 /**
  * The core invariant: every description the package generates re-parses to

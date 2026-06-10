@@ -1,3 +1,6 @@
+import { DEFAULT_LOCALE } from "./i18n/index.js";
+import type { TimeLexicon } from "./i18n/types.js";
+
 export interface ParsedTime {
   hour: number; // 0-23
   minute: number; // 0-59
@@ -5,23 +8,49 @@ export interface ParsedTime {
   assumedMeridiem: boolean;
 }
 
-/**
- * Parse one (possibly merged) time token. Accepted forms:
- * noon, midnight, 9am, 9:30pm, 21:00, 2100/900 (military), bare 0-23.
- * Bare 1-11 assume AM; bare 12 assumes noon; both flagged assumedMeridiem
- * so the caller can surface the assumption with a one-click flip.
- */
-export function parseTimeToken(token: string): ParsedTime | null {
-  if (token === "noon") return { hour: 12, minute: 0, assumedMeridiem: false };
-  if (token === "midnight") return { hour: 0, minute: 0, assumedMeridiem: false };
+/** Escape a locale string for literal use inside a RegExp. */
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
-  const meridiem = token.match(/^(\d{1,2})(?::(\d{2}))?(am|pm)$/);
+// One compiled meridiem pattern per locale time vocabulary.
+const meridiemRegexCache = new WeakMap<TimeLexicon, RegExp>();
+
+function meridiemRegexFor(words: TimeLexicon): RegExp {
+  let re = meridiemRegexCache.get(words);
+  if (!re) {
+    re = new RegExp(
+      `^(\\d{1,2})(?::(\\d{2}))?(${escapeRegExp(words.am)}|${escapeRegExp(words.pm)})$`,
+    );
+    meridiemRegexCache.set(words, re);
+  }
+  return re;
+}
+
+/**
+ * Parse one (possibly merged) time token in a locale's time vocabulary.
+ * Accepted forms: noon, midnight, 9am, 9:30pm, 21:00, 2100/900 (military),
+ * bare 0-23. Bare 1-11 assume AM; bare 12 assumes noon; both flagged
+ * assumedMeridiem so the caller can surface the assumption with a one-click flip.
+ */
+export function readTime(token: string, words: TimeLexicon): ParsedTime | null {
+  if (token === words.noon) return { hour: 12, minute: 0, assumedMeridiem: false };
+  if (token === words.midnight) return { hour: 0, minute: 0, assumedMeridiem: false };
+
+  // Locale clock formats ("9h30", "21h") come first and are explicit.
+  const clock = words.readClock?.(token);
+  if (clock) {
+    if (clock.hour > 23 || clock.minute > 59) return null;
+    return { ...clock, assumedMeridiem: false };
+  }
+
+  const meridiem = token.match(meridiemRegexFor(words));
   if (meridiem) {
     let hour = Number(meridiem[1]);
     const minute = Number(meridiem[2] ?? "0");
     if (hour < 1 || hour > 12 || minute > 59) return null;
-    if (meridiem[3] === "pm" && hour !== 12) hour += 12;
-    if (meridiem[3] === "am" && hour === 12) hour = 0;
+    if (meridiem[3] === words.pm && hour !== 12) hour += 12;
+    if (meridiem[3] === words.am && hour === 12) hour = 0;
     return { hour, minute, assumedMeridiem: false };
   }
 
@@ -50,9 +79,12 @@ export function parseTimeToken(token: string): ParsedTime | null {
   return null;
 }
 
-/** Canonical 12-hour string: "9:05 AM", "12:00 PM". */
+/** Default-locale convenience wrapper around {@link readTime}. */
+export function parseTimeToken(token: string): ParsedTime | null {
+  return readTime(token, DEFAULT_LOCALE.time);
+}
+
+/** Default-locale canonical clock string: "9:05 AM", "12:00 PM". */
 export function formatTime12(hour: number, minute: number): string {
-  const meridiem = hour >= 12 ? "PM" : "AM";
-  const h12 = hour % 12 === 0 ? 12 : hour % 12;
-  return `${h12}:${String(minute).padStart(2, "0")} ${meridiem}`;
+  return DEFAULT_LOCALE.format.time(hour, minute);
 }

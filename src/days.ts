@@ -1,52 +1,5 @@
-export const DAY_LABELS = [
-  "Sunday",
-  "Monday",
-  "Tuesday",
-  "Wednesday",
-  "Thursday",
-  "Friday",
-  "Saturday",
-] as const;
-
-const FULL_DAYS: Record<string, number> = {
-  sunday: 0,
-  monday: 1,
-  tuesday: 2,
-  wednesday: 3,
-  thursday: 4,
-  friday: 5,
-  saturday: 6,
-};
-
-/**
- * Explicit, curated abbreviations. Single letters appear only where
- * unambiguous: m/w/f map; "t" (Tuesday/Thursday) and "s" (Saturday/Sunday)
- * are deliberately absent.
- */
-const DAY_ABBREVIATIONS: Record<string, number> = {
-  f: 5,
-  fr: 5,
-  fri: 5,
-  m: 1,
-  mo: 1,
-  mon: 1,
-  sa: 6,
-  sat: 6,
-  su: 0,
-  sun: 0,
-  th: 4,
-  thu: 4,
-  thur: 4,
-  thurs: 4,
-  thrs: 4,
-  tu: 2,
-  tue: 2,
-  tues: 2,
-  w: 3,
-  we: 3,
-  wed: 3,
-  weds: 3,
-};
+import { DEFAULT_LOCALE } from "./i18n/index.js";
+import type { DayLexicon, Lexicon } from "./i18n/types.js";
 
 /** Damerau-Levenshtein (optimal string alignment) distance. */
 export function editDistance(a: string, b: string): number {
@@ -97,23 +50,61 @@ export function fuzzyMatch(token: string, candidates: readonly string[]): string
   return bestDist <= allowed && !tie ? best : null;
 }
 
-const FULL_DAY_NAMES = Object.keys(FULL_DAYS);
+/**
+ * Fuzzy match over a surface-word → canonical-symbol map, returning the
+ * symbol. Unlike {@link fuzzyMatch}, two surfaces that resolve to the SAME
+ * symbol (e.g. "minute" and its alias "minutes") never count as a tie; only
+ * genuinely ambiguous matches across different symbols reject.
+ */
+export function fuzzyCanonicalize(
+  token: string,
+  surfaceToSymbol: ReadonlyMap<string, string>,
+): string | null {
+  const allowed = maxDistanceFor(token.length);
+  if (allowed === 0) return null;
+  let bestSymbol: string | null = null;
+  let bestDist = allowed + 1;
+  let tie = false;
+  for (const [surface, symbol] of surfaceToSymbol) {
+    const d = editDistance(token, surface);
+    if (d < bestDist) {
+      bestDist = d;
+      bestSymbol = symbol;
+      tie = false;
+    } else if (d === bestDist && symbol !== bestSymbol) {
+      tie = true;
+    }
+  }
+  return bestDist <= allowed && !tie ? bestSymbol : null;
+}
 
 /**
- * Token → day index 0-6 (cron convention, 0=Sunday), or null.
- * Order: exact full name → curated abbreviation → plural (trailing s)
- * retry → unique fuzzy match against full names.
+ * Token → day index 0-6 (cron convention, 0=Sunday) within a locale's day
+ * vocabulary, or null. Order: exact full name → curated abbreviation →
+ * singularized retry → unique fuzzy match against full names. The plural rule is
+ * the locale's ({@link Lexicon.singularize}), not assumed to be trailing-"s".
  */
-export function matchDay(token: string): number | null {
-  if (token in FULL_DAYS) return FULL_DAYS[token];
-  if (token in DAY_ABBREVIATIONS) return DAY_ABBREVIATIONS[token];
-  if (token.endsWith("s")) {
-    const singular = token.slice(0, -1);
-    if (singular in FULL_DAYS) return FULL_DAYS[singular];
-    if (singular in DAY_ABBREVIATIONS) return DAY_ABBREVIATIONS[singular];
-    const fuzzySingular = fuzzyMatch(singular, FULL_DAY_NAMES);
-    if (fuzzySingular !== null) return FULL_DAYS[fuzzySingular];
+export function findDay(
+  token: string,
+  days: DayLexicon,
+  singularize: Lexicon["singularize"],
+): number | null {
+  const { fullNames, abbreviations } = days;
+  if (token in fullNames) return fullNames[token];
+  if (token in abbreviations) return abbreviations[token];
+  const fullNameKeys = Object.keys(fullNames);
+  const singular = singularize(token);
+  if (singular !== null) {
+    if (singular in fullNames) return fullNames[singular];
+    if (singular in abbreviations) return abbreviations[singular];
+    const fuzzySingular = fuzzyMatch(singular, fullNameKeys);
+    if (fuzzySingular !== null) return fullNames[fuzzySingular];
   }
-  const fuzzy = fuzzyMatch(token, FULL_DAY_NAMES);
-  return fuzzy === null ? null : FULL_DAYS[fuzzy];
+  const fuzzy = fuzzyMatch(token, fullNameKeys);
+  return fuzzy === null ? null : fullNames[fuzzy];
+}
+
+/** Default-locale convenience wrapper around {@link findDay}. */
+export function matchDay(token: string): number | null {
+  return findDay(token, DEFAULT_LOCALE.days, DEFAULT_LOCALE.lexicon.singularize);
 }
