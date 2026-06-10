@@ -112,6 +112,20 @@ describe("parseNaturalSchedule: assumptions", () => {
     }
   });
 
+  it("12:30 flips to 12:30am, keeping the minutes", () => {
+    const result = parseNaturalSchedule("every day at 12:30");
+    expect(result.ok).toEqual(true);
+    if (!result.ok) return;
+    expect(result.assumptions).toEqual([
+      {
+        text: 'Read "12:30" as 12:30 PM.',
+        alternative: { label: "Did you mean 12:30 AM?", input: "every day at 12:30am" },
+      },
+    ]);
+    const flipped = parseNaturalSchedule("every day at 12:30am");
+    expect(flipped.ok && flipped.cron).toEqual("30 0 * * *");
+  });
+
   it("surfaces default day for bare weekly and monthly", () => {
     const weekly = parseNaturalSchedule("weekly at 9am");
     expect(weekly.ok && weekly.assumptions[0]?.text).toEqual(
@@ -162,6 +176,37 @@ describe("parseNaturalSchedule: errors", () => {
     expect(!minutes.ok && minutes.reason).toEqual("unsupported");
     const intervalTime = parseNaturalSchedule("every 15 minutes at 9am");
     expect(!intervalTime.ok && intervalTime.reason).toEqual("unsupported");
+  });
+
+  it("rejects a pasted cron whose fields can never match", () => {
+    const result = parseNaturalSchedule("60 99 * * *");
+    expect(result.ok).toEqual(false);
+    if (result.ok) return;
+    expect(result.reason).toEqual("unsupported");
+    expect(result.hint).toContain("never run");
+  });
+
+  it("'every other day/week/month' gets the unsupported answer, not a token error", () => {
+    for (const input of ["every other day", "every other week", "every other month"]) {
+      const result = parseNaturalSchedule(input);
+      expect(result.ok).toEqual(false);
+      if (result.ok) continue;
+      expect(result.reason).toEqual("unsupported");
+      expect(result.hint).toContain("arbitrary start");
+    }
+  });
+
+  it("'at minute N' outside an hourly schedule is rejected, not dropped", () => {
+    const daily = parseNaturalSchedule("every day at minute 30");
+    expect(!daily.ok && daily.reason).toEqual("unsupported");
+    expect(!daily.ok && daily.hint).toContain("hourly");
+    const minutely = parseNaturalSchedule("every 15 minutes at minute 30");
+    expect(!minutely.ok && minutely.reason).toEqual("unsupported");
+    // The legitimate hourly shapes still work.
+    const hourly = parseNaturalSchedule("hourly at minute 30");
+    expect(hourly.ok && hourly.cron).toEqual("30 * * * *");
+    const interval = parseNaturalSchedule("every 2 hours at minute 15");
+    expect(interval.ok && interval.cron).toEqual("15 */2 * * *");
   });
 
   it("unknown words are named in the hint", () => {

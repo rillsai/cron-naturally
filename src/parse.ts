@@ -1,4 +1,9 @@
-import { isCronExpression, normalizeCronSpacing, SPECIAL_EQUIVALENTS } from "./cron.js";
+import {
+  isCronExpression,
+  isRunnableCron,
+  normalizeCronSpacing,
+  SPECIAL_EQUIVALENTS,
+} from "./cron.js";
 import { fuzzyMatch, matchDay } from "./days.js";
 import { describeCron } from "./describe.js";
 import { EXAMPLE_PHRASES } from "./examples.js";
@@ -118,6 +123,12 @@ export function parseNaturalSchedule(raw: string): ParseResult {
 
   // Pasted cron: pass through (explain mode for consumers).
   if (isCronExpression(trimmed)) {
+    if (!isRunnableCron(trimmed)) {
+      return fail(
+        "unsupported",
+        "That looks like a cron expression, but a field is out of range, so it would never run.",
+      );
+    }
     const cron = SPECIAL_EQUIVALENTS[trimmed] ?? normalizeCronSpacing(trimmed);
     return {
       ok: true,
@@ -161,6 +172,12 @@ export function parseNaturalSchedule(raw: string): ParseResult {
           intervalN = 2;
           i += 2;
           continue;
+        }
+        if (unit === "day" || unit === "week" || unit === "month") {
+          return fail(
+            "unsupported",
+            `Cron can't express "every N ${unit}s" from an arbitrary start. Use specific days instead, like 'mondays and thursdays'.`,
+          );
         }
       }
       if (/^\d+$/.test(tokens[i + 1] ?? "")) {
@@ -305,6 +322,16 @@ export function parseNaturalSchedule(raw: string): ParseResult {
     );
   }
 
+  // "at minute N" picks the minute within an hourly cadence. In any other
+  // shape it has nothing to attach to and would be silently dropped — reject
+  // instead so the user's intent is never ignored.
+  if (minuteOf !== null && intervalUnit !== "hour" && freq !== "hourly") {
+    return fail(
+      "unsupported",
+      "'At minute N' only works with an hourly schedule, like 'hourly at minute 30'. For a time of day, write it directly, like '9:30am'.",
+    );
+  }
+
   // Day-of-week field — canonical weekday block is "1-5": when the final
   // merged set (named days + weekday/weekend flags) is exactly {1,2,3,4,5},
   // emit "1-5", not "1,2,3,4,5".
@@ -351,11 +378,14 @@ export function parseNaturalSchedule(raw: string): ParseResult {
     for (const t of times) {
       if (!t.assumedMeridiem) continue;
       const flippedHour = t.hour === 12 ? 0 : t.hour + 12;
+      const minutePart = `:${String(t.minute).padStart(2, "0")}`;
       const flippedToken =
         t.hour === 12
-          ? "midnight"
+          ? t.minute > 0
+            ? `12${minutePart}am`
+            : "midnight"
           : t.minute > 0
-            ? `${t.hour}:${String(t.minute).padStart(2, "0")}pm`
+            ? `${t.hour}${minutePart}pm`
             : `${t.hour}pm`;
       assumptions.push({
         text: `Read "${t.raw}" as ${formatTime12(t.hour, t.minute)}.`,

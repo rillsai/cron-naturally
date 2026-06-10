@@ -118,6 +118,15 @@ function parseSchedule(cronExpression: string): CronSchedule | null {
 }
 
 /**
+ * True when the cron (or @special) is semantically runnable: every field
+ * expands to at least one in-range value. CRON_REGEX alone is shape-only and
+ * accepts e.g. "60 99 * * *", which would never fire.
+ */
+export function isRunnableCron(cronExpression: string): boolean {
+  return parseSchedule(cronExpression) !== null;
+}
+
+/**
  * The dom/dow OR trap: when BOTH day fields are restricted, cron fires when
  * EITHER matches; otherwise the restricted one (if any) decides.
  */

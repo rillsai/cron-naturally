@@ -60,4 +60,29 @@ describe("explainCronFields", () => {
   it("does not add the OR row when a day field starts with a step (counts as unrestricted)", () => {
     expect(explainCronFields("0 4 */2 * 5")?.length).toEqual(5);
   });
+
+  it("explains bare steps from their start to the field maximum", () => {
+    expect(explainCronFields("5/15 * * * *")?.[0].meaning).toEqual(
+      "every 15 minutes from 5 through 59",
+    );
+    expect(explainCronFields("0 1,2/3 * * *")?.[1].meaning).toEqual(
+      "at hour 1, every 3 hours from 2 through 23",
+    );
+    expect(explainCronFields("0 0 5/10 * *")?.[2].meaning).toEqual(
+      "every 10 days from 5 through 31",
+    );
+  });
+
+  it("uses the step phrasing for a stepped day-of-month in the Day rule row", () => {
+    const rows = explainCronFields("0 4 5/10 * 5");
+    expect(rows?.[5]?.meaning).toEqual(
+      "Both day fields are set, so cron runs when either matches: every 10 days from 5 through 31, or on Friday.",
+    );
+  });
+
+  it("returns null for shape-valid crons that can never run", () => {
+    expect(explainCronFields("60 99 * * *")).toEqual(null);
+    expect(explainCronFields("0 0 * * 9")).toEqual(null);
+    expect(explainCronFields("*/0 * * * *")).toEqual(null);
+  });
 });
