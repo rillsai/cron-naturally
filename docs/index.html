@@ -16,7 +16,7 @@
 
     <!-- Set theme before paint to avoid flash -->
     <script>
-      (function () {
+      (() => {
         try {
           var t = localStorage.getItem("cn-theme");
           if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
@@ -37,19 +37,7 @@
     <header class="masthead">
       <div class="shell">
         <a class="brand" href="#top" aria-label="cron-naturally home">
-          <svg class="logo" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-            <circle cx="32" cy="32" r="27" stroke="currentColor" stroke-width="2" opacity="0.22" />
-            <g stroke="currentColor" stroke-width="7" stroke-linecap="round">
-              <line x1="53.7" y1="19.5" x2="39.8" y2="27.5" />
-              <line x1="53.7" y1="44.5" x2="39.8" y2="36.5" />
-              <line x1="32" y1="57" x2="32" y2="40" />
-              <line x1="10.3" y1="44.5" x2="24.2" y2="36.5" />
-              <line x1="10.3" y1="19.5" x2="24.2" y2="27.5" />
-            </g>
-            <line x1="32" y1="6" x2="32" y2="30" stroke="currentColor" stroke-width="8" stroke-linecap="round" />
-            <circle cx="32" cy="32" r="6" fill="currentColor" />
-            <circle cx="32" cy="32" r="2.4" fill="var(--logo-pivot)" />
-          </svg>
+          <img src="./favicon.svg" class="logo" aria-hidden="true" />
           <span class="wordmark"><span class="cron">cron</span><span class="mid">·</span><span class="nat">naturally</span></span>
         </a>
 
@@ -218,19 +206,7 @@
     <footer class="foot">
       <div class="shell">
         <a class="brand" href="#top" aria-label="cron-naturally">
-          <svg class="logo" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-            <circle cx="32" cy="32" r="27" stroke="currentColor" stroke-width="2" opacity="0.22" />
-            <g stroke="currentColor" stroke-width="7" stroke-linecap="round">
-              <line x1="53.7" y1="19.5" x2="39.8" y2="27.5" />
-              <line x1="53.7" y1="44.5" x2="39.8" y2="36.5" />
-              <line x1="32" y1="57" x2="32" y2="40" />
-              <line x1="10.3" y1="44.5" x2="24.2" y2="36.5" />
-              <line x1="10.3" y1="19.5" x2="24.2" y2="27.5" />
-            </g>
-            <line x1="32" y1="6" x2="32" y2="30" stroke="currentColor" stroke-width="8" stroke-linecap="round" />
-            <circle cx="32" cy="32" r="6" fill="currentColor" />
-            <circle cx="32" cy="32" r="2.4" fill="var(--logo-pivot)" />
-          </svg>
+          <img src="./favicon.svg" class="logo" aria-hidden="true" />
           <span class="wordmark"><span class="cron">cron</span><span class="mid">·</span><span class="nat">naturally</span></span>
         </a>
         <div class="links">
